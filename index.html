@@ -146,13 +146,11 @@ function showItem(id){
   if(!it){ view.innerHTML = titleBlock('العمل غير موجود') + '<main><div class="empty">لم نجد هذا العمل.</div></main>'; return; }
   markActive('#/');
   gimgs = it.images || []; gi = 0;
-  const msg = `${D.settings.waMessage || ''} ${it.title}`.trim();
   view.innerHTML = crumbs(esc(it.title)) +
     `<main><div class="detail">
       <div class="gallery" id="gal" style="${gimgs.length?'':'background:'+grad(it.id)}"></div>
       <h1>${esc(it.title)}</h1><time>${fmt(it.date)}</time>
       ${it.description ? `<p class="desc">${esc(it.description)}</p>` : ''}
-      <a class="btn" target="_blank" rel="noopener" href="${waLink(msg)}">اطلب تصوير مثل هذا عبر واتساب</a>
     </div></main>`;
   drawGallery();
   const gal = document.getElementById('gal');
