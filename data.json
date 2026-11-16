@@ -21,16 +21,7 @@
     },
     "pinHash": "217f7badc5615d5e40b71b9177cf9c15a1a61fa0c22de6bff18e18bece6dba0d"
   },
-  "menu": [
-    {
-      "label": "الصفحة الرئيسية",
-      "link": "home"
-    },
-    {
-      "label": "طلب تصوير",
-      "link": "wa"
-    }
-  ],
+  "menu": [],
   "categories": [],
   "pages": [],
   "items": [
@@ -39,7 +30,9 @@
       "title": "زواج عمر",
       "date": "2026-11-16",
       "category": "weddings",
-      "images": [],
+      "images": [
+        "images/mwjv1n1nyunh.jpg"
+      ],
       "description": "مرحبا بكم"
     }
   ]
