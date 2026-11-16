@@ -28,9 +28,11 @@
       "id": "imwjvxlzqxju8",
       "title": "عمل جديد",
       "date": "2026-11-16",
-      "images": [],
-      "description": "",
-      "published": false
+      "images": [
+        "images/mwjvxyysw3ug.jpg"
+      ],
+      "description": "قتننةوز",
+      "published": true
     },
     {
       "id": "imwjvoa6ms1ya",
