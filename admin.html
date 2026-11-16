@@ -84,7 +84,7 @@ label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
 
 <script>
 let D = null, tab = 'settings', itemFilter = '', dirty = false;
-const TABS = [['settings','الإعدادات والألوان'],['menu','القائمة'],['cats','الأقسام'],['items','الأعمال'],['pages','الصفحات'],['publish','النشر والأمان']];
+const TABS = [['settings','الإعدادات والألوان'],['items','الأعمال'],['publish','النشر والأمان']];
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sha = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,'0')).join('');
@@ -117,7 +117,14 @@ function setPath(path, val){
   o[k[k.length-1]] = val;
   markDirty();
 }
-function markDirty(){ dirty = true; $('dirty').style.display = 'block'; }
+let rev = 0, autoTimer = null;
+function markDirty(){
+  dirty = true; rev++;
+  const b = $('dirty'); b.style.display = 'block';
+  b.textContent = G().token ? '● جارٍ الحفظ تلقائياً...' : '● أضف مفتاح GitHub من تبويب «النشر والأمان» ليُحفظ تلقائياً';
+  clearTimeout(autoTimer);
+  if(G().token) autoTimer = setTimeout(() => publish(true), 3000);
+}
 function move(arr, i, d){ const j = i + d; if(j<0 || j>=arr.length) return; [arr[i],arr[j]] = [arr[j],arr[i]]; markDirty(); draw(); }
 function inp(path, val, type='text', extra=''){ return `<input type="${type}" value="${esc(val)}" data-p="${path}" ${extra}>`; }
 
@@ -130,7 +137,7 @@ document.addEventListener('input', e => {
 
 function draw(){
   $('tabs').innerHTML = TABS.map(([k,n]) => `<button class="tab ${k===tab?'on':''}" onclick="tab='${k}';draw()">${n}</button>`).join('');
-  $('panel').innerHTML = ({settings:pSettings, menu:pMenu, cats:pCats, items:pItems, pages:pPages, publish:pPublish})[tab]();
+  $('panel').innerHTML = ({settings:pSettings, items:pItems, publish:pPublish})[tab]();
 }
 
 /* ---------- الإعدادات ---------- */
@@ -289,21 +296,24 @@ function delPage(i){
 const G = () => ({ token: (localStorage.gh_token||'').trim(), owner: (localStorage.gh_owner||'alaqrab009').trim(), repo: (localStorage.gh_repo||'zwajat').trim(), branch: (localStorage.gh_branch||'main').trim() });
 function pPublish(){
   const g = G();
-  return `<h2>النشر على GitHub</h2>
-  <p class="hint">الصق مفتاح GitHub (Token) مرة واحدة ثم اضغط «حفظ واعتماد المفتاح». يُحفظ في هذا المتصفح على هذا الجهاز فقط، فإن فتحت اللوحة من جهاز أو متصفح آخر ألصقه هناك مرة واحدة أيضاً. لا تشاركه مع أحد.</p>
-  <div class="row2">
-    <div><label>اسم الحساب</label><input id="gOwner" value="${esc(g.owner)}"></div>
-    <div><label>اسم المستودع (Repo)</label><input id="gRepo" value="${esc(g.repo)}"></div>
-    <div><label>الفرع</label><input id="gBranch" value="${esc(g.branch)}"></div>
-    <div><label>مفتاح GitHub (Token)</label><input type="password" id="gToken" value="${esc(g.token)}" placeholder="github_pat_..."></div>
-  </div>
+  return `<h2>الحفظ والنشر</h2>
+  <p class="hint">بعد حفظ المفتاح مرة واحدة، كل تعديل تعمله في اللوحة يُحفظ وينشر تلقائياً خلال ثوانٍ، بدون أي تأكيد. دخولك للوحة هو التأكيد.</p>
+  <label>مفتاح GitHub (Token)</label>
+  <input type="password" id="gToken" value="${esc(g.token)}" placeholder="الصق المفتاح هنا">
   <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-    <button class="btn" onclick="saveToken()">💾 حفظ واعتماد المفتاح</button>
+    <button class="btn" onclick="saveToken()">💾 حفظ المفتاح</button>
     <span class="badge" style="${g.token?'':'display:none'}">✔ يوجد مفتاح محفوظ</span>
   </div>
+  <details style="margin-top:14px"><summary style="cursor:pointer;color:var(--muted)">إعدادات متقدمة (لا تغيّرها عادةً)</summary>
+    <div class="row2">
+      <div><label>اسم الحساب</label><input id="gOwner" value="${esc(g.owner)}"></div>
+      <div><label>اسم المستودع</label><input id="gRepo" value="${esc(g.repo)}"></div>
+      <div><label>الفرع</label><input id="gBranch" value="${esc(g.branch)}"></div>
+    </div>
+  </details>
   <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-    <button class="btn green" onclick="publish()">🚀 نشر التعديلات الآن</button>
-    <button class="btn sec" onclick="downloadJson()">⬇ تنزيل data.json (نسخة احتياطية)</button>
+    <button class="btn green" onclick="publish()">🚀 حفظ ونشر الآن</button>
+    <button class="btn sec" onclick="downloadJson()">⬇ نسخة احتياطية</button>
   </div>
   <div id="log">جاهز.</div>
   <div class="box"><h2 style="font-size:17px">تغيير الرقم السري</h2>
@@ -311,7 +321,6 @@ function pPublish(){
       <div><label>الرقم السري الجديد</label><input type="password" id="newPin" inputmode="numeric"></div>
       <div style="align-self:end"><button class="btn" onclick="changePin()">حفظ الرقم</button></div>
     </div>
-    <p class="hint" style="margin-top:10px">الرقم الافتراضي هو 1234 — غيّره الآن. بعد التغيير اضغط «نشر التعديلات». ملاحظة: الحماية الحقيقية هي مفتاح GitHub الذي لا يملكه غيرك، فالرقم يخفي اللوحة فقط.</p>
   </div>`;
 }
 async function saveToken(){
@@ -363,20 +372,26 @@ async function gh(path, opt={}){
 async function put(path, contentB64, msg){
   const g = G();
   let sha;
-  const ex = await gh(`${path}?ref=${encodeURIComponent(g.branch)}`);
-  if(ex.ok) sha = (await ex.json()).sha;
-  const r = await gh(path, { method:'PUT', body: JSON.stringify({ message: msg, content: contentB64, branch: g.branch, sha }) });
-  if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error((e.message||r.status) + ' — ' + path); }
+  for(let attempt = 0; attempt < 3; attempt++){
+    const ex = await gh(`${path}?ref=${encodeURIComponent(g.branch)}&t=${Date.now()}`, { cache:'no-store' });
+    sha = ex.ok ? (await ex.json()).sha : undefined;
+    const r = await gh(path, { method:'PUT', body: JSON.stringify({ message: msg, content: contentB64, branch: g.branch, sha }) });
+    if(r.ok) return;
+    const e = await r.json().catch(()=>({}));
+    if(attempt < 2 && (r.status === 409 || r.status === 422)) { await new Promise(z=>setTimeout(z,800)); continue; }
+    throw new Error((e.message||r.status) + ' — ' + path);
+  }
 }
 
 let publishing = false;
-async function publish(){
-  if(publishing) return false;
+async function publish(silent){
+  if(publishing){ if(silent) autoTimer = setTimeout(() => publish(true), 3000); return false; }
   const g = G();
-  if(!g.token || !g.repo){ tab = 'publish'; draw(); alert('أدخل اسم المستودع ومفتاح GitHub أولاً'); return false; }
-  if(tab !== 'publish'){ tab = 'publish'; draw(); }
+  if(!g.token || !g.repo){ if(!silent){ tab = 'publish'; draw(); alert('الصق مفتاح GitHub أولاً'); } return false; }
+  const myRev = rev;
   publishing = true;
-  $('log').textContent = 'بدء النشر...';
+  if($('log')) $('log').textContent = 'بدء النشر...';
+  $('dirty').textContent = '● جارٍ الحفظ...'; $('dirty').style.display = 'block';
   try{
     // رفع الصور الجديدة
     const up = [];
@@ -393,11 +408,14 @@ async function publish(){
     }
     log('رفع data.json ...');
     await put('data.json', b64(JSON.stringify(D, null, 2)), 'تحديث بيانات الموقع');
-    dirty = false; $('dirty').style.display = 'none';
     log('✅ تم النشر بنجاح. يظهر التحديث في الموقع خلال دقيقة تقريباً.');
-    publishing = false; return true;
+    publishing = false;
+    if(rev !== myRev){ autoTimer = setTimeout(() => publish(true), 1500); }
+    else { dirty = false; const b = $('dirty'); b.textContent = '✅ تم الحفظ'; setTimeout(()=>{ if(!dirty) b.style.display='none'; }, 2500); }
+    return true;
   }catch(e){
     log('❌ فشل النشر: ' + e.message);
+    $('dirty').textContent = '❌ فشل الحفظ — اضغط للمحاولة ثانية'; $('dirty').style.display = 'block';
     log('تأكد من صحة المفتاح واسم المستودع، وأن للمفتاح صلاحية Contents: Read and write.');
   }
   publishing = false; return false;
