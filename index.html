@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>جارٍ التحميل...</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="header-in">
+    <a href="#/" class="logo" id="logo"></a>
+    <button class="menu-btn" id="menuBtn" aria-label="القائمة">☰</button>
+    <nav id="nav"><ul id="menu"></ul></nav>
+  </div>
+</header>
+
+<div id="view" style="flex:1;display:flex;flex-direction:column"></div>
+
+<footer>
+  <div class="social" id="social"></div>
+  <p id="footText"></p>
+  <p id="devText"></p>
+</footer>
+
+<a class="wa" id="waBtn" href="#" target="_blank" aria-label="واتساب">
+  <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1-1.4-.7-2.4-1.3-3.3-2.9-.1-.2 0-.4.1-.5l.4-.5.2-.4c.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1.1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.2.7 3 .6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.100.2-1.200-.1-.1-.3-.2-.5-.3z"/></svg>
+</a>
+
+<div class="lightbox" id="lightbox"><button id="lbClose">✕</button><img id="lbImg" alt=""></div>
+
+<script>
+let D = null;
+const view = document.getElementById('view');
+let catPage = 1;
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); return m ? `${m[3]}-${m[2]}-${m[1]}` : (iso||''); };
+const GRADS = [["#8a5a2b","#2b1a0e"],["#6b4a7a","#231531"],["#2f6b6b","#0f2b2b"],["#a07a3a","#35240e"],["#4a5f8a","#161f33"],["#7a3b3b","#2b1111"]];
+const grad = id => { let h=0; for(const ch of String(id)) h=(h*31+ch.charCodeAt(0))>>>0; const g=GRADS[h%GRADS.length]; return `linear-gradient(160deg,${g[0]},${g[1]})`; };
+const sorted = list => [...list].sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+
+async function init(){
+  try{
+    const r = await fetch('data.json?t=' + Date.now());
+    if(!r.ok) throw 0;
+    D = await r.json();
+  }catch(e){
+    view.innerHTML = '<div class="empty">تعذّر تحميل البيانات.<br>افتح الموقع من رابط الاستضافة (وليس بنقر الملف مباشرة).</div>';
+    return;
+  }
+  applySettings();
+  buildMenu();
+  route();
+}
+
+function applySettings(){
+  const s = D.settings, root = document.documentElement.style;
+  root.setProperty('--bg', s.bg); root.setProperty('--bg-dark', s.bgDark);
+  root.setProperty('--card', s.card); root.setProperty('--accent', s.accent);
+  document.title = s.siteName;
+  document.getElementById('logo').innerHTML = (s.logoImage ? `<img src="${esc(s.logoImage)}" alt="">` : '') + `<span>${esc(s.siteName)}</span>`;
+  document.getElementById('footText').textContent = s.footerText || '';
+  document.getElementById('devText').textContent = s.devText || '';
+  const soc = [['x','X'],['instagram','IG'],['snap','SC'],['tiktok','TT'],['youtube','YT']];
+  document.getElementById('social').innerHTML = soc.filter(([k])=>s.social && s.social[k]).map(([k,t])=>`<a href="${esc(s.social[k])}" target="_blank" rel="noopener">${t}</a>`).join('');
+  document.getElementById('waBtn').href = waLink(s.waMessage);
+}
+
+function waLink(msg){ return `https://wa.me/${String(D.settings.waNumber||'').replace(/\D/g,'')}?text=${encodeURIComponent(msg||'')}`; }
+
+function linkHref(l){
+  if(l === 'home') return '#/';
+  if(l === 'wa') return waLink(D.settings.waMessage);
+  if(l.startsWith('cat:')) return '#/cat/' + l.slice(4);
+  if(l.startsWith('page:')) return '#/page/' + l.slice(5);
+  return l;
+}
+
+function buildMenu(){
+  document.getElementById('menu').innerHTML = D.menu.map(m=>{
+    const ext = m.link==='wa' || /^https?:/.test(m.link);
+    return `<li><a href="${esc(linkHref(m.link))}" data-link="${esc(m.link)}" ${ext?'target="_blank" rel="noopener"':''}>${esc(m.label)}</a></li>`;
+  }).join('');
+}
+
+function markActive(h){
+  document.querySelectorAll('#menu a').forEach(a=>{
+    a.classList.toggle('active', a.getAttribute('href') === h);
+  });
+}
+
+function card(it){
+  const cover = it.images && it.images[0];
+  const n = (it.images||[]).length;
+  return `<article class="card" onclick="location.hash='#/item/${esc(it.id)}'">
+    <div class="thumb" style="background:${grad(it.id)}">
+      ${cover ? `<img src="${esc(cover)}" alt="${esc(it.title)}" loading="lazy">` : `<span class="ph">📷</span>`}
+      ${n>1 ? `<span class="count">${n} صور</span>` : ''}
+    </div>
+    <div class="info"><h3>${esc(it.title)}</h3><time>${fmt(it.date)}</time></div>
+  </article>`;
+}
+
+function titleBlock(t, sub){
+  return `<section class="page-title"><h1>${esc(t)}</h1>${sub?`<p>${esc(sub)}</p>`:''}</section>`;
+}
+function crumbs(...parts){
+  return `<div class="crumbs"><div><a href="#/">الصفحة الرئيسية</a>${parts.map(p=>' &nbsp;›&nbsp; '+p).join('')}</div></div>`;
+}
+
+function route(){
+  const h = location.hash || '#/';
+  document.getElementById('nav').classList.remove('open');
+  window.scrollTo(0,0);
+  const parts = h.slice(2).split('/');
+
+  if(parts[0]==='cat') return showCat(parts[1]);
+  if(parts[0]==='item') return showItem(parts[1]);
+  if(parts[0]==='page') return showPage(parts[1]);
+  showHome();
+}
+
+function showHome(){
+  markActive('#/');
+  let html = titleBlock(D.settings.siteName, D.settings.tagline) + '<main>';
+  let any = false;
+  D.categories.forEach(c=>{
+    const list = sorted(D.items.filter(i=>i.category===c.id)).slice(0,4);
+    if(!list.length) return;
+    any = true;
+    html += `<div class="home-section"><div class="section-head"><h2>${esc(c.name)}</h2><a href="#/cat/${esc(c.id)}">عرض الكل ‹</a></div><div class="grid">${list.map(card).join('')}</div></div>`;
+  });
+  if(!any) html += '<div class="empty">لا توجد أعمال بعد.</div>';
+  view.innerHTML = html + '</main>';
+}
+
+function showCat(id){
+  const c = D.categories.find(x=>x.id===id);
+  if(!c){ view.innerHTML = titleBlock('القسم غير موجود') + '<main><div class="empty">لم نجد هذا القسم.</div></main>'; return; }
+  markActive('#/cat/'+id);
+  const per = Math.max(1, +D.settings.perPage || 8);
+  const list = sorted(D.items.filter(i=>i.category===id));
+  const pages = Math.max(1, Math.ceil(list.length/per));
+  if(catPage > pages) catPage = 1;
+  let html = titleBlock(c.name) + crumbs(esc(c.name)) + '<main>';
+  html += list.length ? `<div class="grid">${list.slice((catPage-1)*per, catPage*per).map(card).join('')}</div>` : '<div class="empty">لا توجد أعمال في هذا القسم بعد.</div>';
+  if(pages > 1){
+    html += '<div class="pager">';
+    for(let i=1;i<=pages;i++) html += `<button class="${i===catPage?'on':''}" onclick="goPage(${i})">${i}</button>`;
+    html += `<button ${catPage===pages?'disabled':''} onclick="goPage(${catPage+1})">«</button></div>`;
+  }
+  view.innerHTML = html + '</main>';
+}
+function goPage(n){ catPage = n; route(); }
+
+let gi = 0, gimgs = [];
+function showItem(id){
+  const it = D.items.find(x=>x.id===id);
+  if(!it){ view.innerHTML = titleBlock('العمل غير موجود') + '<main><div class="empty">لم نجد هذا العمل.</div></main>'; return; }
+  const c = D.categories.find(x=>x.id===it.category);
+  markActive(c ? '#/cat/'+c.id : '');
+  gimgs = it.images || []; gi = 0;
+  const msg = `${D.settings.waMessage || ''} ${it.title}`.trim();
+  view.innerHTML = crumbs(...[c?`<a href="#/cat/${esc(c.id)}">${esc(c.name)}</a>`:'', esc(it.title)].filter(Boolean)) +
+    `<main><div class="detail">
+      <div class="gallery" id="gal" style="${gimgs.length?'':'background:'+grad(it.id)}"></div>
+      <h1>${esc(it.title)}</h1><time>${fmt(it.date)}</time>
+      ${it.description ? `<p class="desc">${esc(it.description)}</p>` : ''}
+      <a class="btn" target="_blank" rel="noopener" href="${waLink(msg)}">اطلب تصوير مثل هذا عبر واتساب</a>
+    </div></main>`;
+  drawGallery();
+  const gal = document.getElementById('gal');
+  let x0 = null;
+  gal.addEventListener('touchstart', e=>{ x0 = e.touches[0].clientX; }, {passive:true});
+  gal.addEventListener('touchend', e=>{ if(x0===null) return; const dx = e.changedTouches[0].clientX - x0; if(Math.abs(dx)>50) moveG(dx<0?1:-1); x0=null; });
+}
+function drawGallery(){
+  const g = document.getElementById('gal'); if(!g) return;
+  if(!gimgs.length){ g.innerHTML = '<div class="ph">📷</div>'; return; }
+  g.innerHTML = `<img src="${esc(gimgs[gi])}" alt="" onclick="openLb()">` +
+    (gimgs.length>1 ? `<button class="arrow prev" onclick="moveG(-1)">›</button><button class="arrow next" onclick="moveG(1)">‹</button>
+      <span class="num">${gi+1} / ${gimgs.length}</span>
+      <div class="dots">${gimgs.map((_,i)=>`<i class="${i===gi?'on':''}"></i>`).join('')}</div>` : '');
+}
+function moveG(d){ gi = (gi + d + gimgs.length) % gimgs.length; drawGallery(); }
+function openLb(){ document.getElementById('lbImg').src = gimgs[gi]; document.getElementById('lightbox').classList.add('open'); }
+document.getElementById('lbClose').onclick = ()=>document.getElementById('lightbox').classList.remove('open');
+document.getElementById('lightbox').onclick = e=>{ if(e.target.id==='lightbox') e.currentTarget.classList.remove('open'); };
+
+function showPage(id){
+  const p = (D.pages||[]).find(x=>x.id===id);
+  if(!p){ view.innerHTML = titleBlock('الصفحة غير موجودة') + '<main><div class="empty">لم نجد هذه الصفحة.</div></main>'; return; }
+  markActive('#/page/'+id);
+  view.innerHTML = titleBlock(p.title) + crumbs(esc(p.title)) + `<main><div class="page-body">${esc(p.content)}</div></main>`;
+}
+
+document.getElementById('menuBtn').onclick = ()=>document.getElementById('nav').classList.toggle('open');
+window.addEventListener('hashchange', ()=>{ catPage = 1; if(D) route(); });
+init();
+</script>
+</body>
+</html>
