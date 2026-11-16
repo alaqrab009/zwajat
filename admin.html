@@ -90,11 +90,22 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const sha = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,'0')).join('');
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 const $ = id => document.getElementById(id);
+const G = () => ({ token: (localStorage.gh_token||'').trim(), owner: (localStorage.gh_owner||'alaqrab009').trim(), repo: (localStorage.gh_repo||'zwajat').trim(), branch: (localStorage.gh_branch||'main').trim() });
 
 /* ---------- الدخول ---------- */
 async function load(){
   try{
-    const r = await fetch('data.json?t=' + Date.now());
+    // المصدر الأصح: GitHub مباشرة (الموقع المنشور قد يتأخر دقيقة أو دقيقتين)
+    let r = null;
+    const g = G();
+    if(g.token && g.repo){
+      try{
+        r = await fetch(`https://api.github.com/repos/${g.owner}/${g.repo}/contents/data.json?ref=${encodeURIComponent(g.branch)}&t=${Date.now()}`,
+          { cache:'no-store', headers:{ Authorization:'Bearer '+g.token, Accept:'application/vnd.github.raw' } });
+        if(!r.ok) r = null;
+      }catch(e){ r = null; }
+    }
+    if(!r) r = await fetch('data.json?t=' + Date.now(), { cache:'no-store' });
     if(!r.ok) throw 0;
     D = await r.json();
   }catch(e){
@@ -293,7 +304,6 @@ function delPage(i){
 }
 
 /* ---------- النشر والأمان ---------- */
-const G = () => ({ token: (localStorage.gh_token||'').trim(), owner: (localStorage.gh_owner||'alaqrab009').trim(), repo: (localStorage.gh_repo||'zwajat').trim(), branch: (localStorage.gh_branch||'main').trim() });
 function pPublish(){
   const g = G();
   return `<h2>الحفظ والنشر</h2>
