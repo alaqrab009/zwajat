@@ -109,7 +109,7 @@ function titleBlock(t, sub){
   return `<section class="page-title"><h1>${esc(t)}</h1>${sub?`<p>${esc(sub)}</p>`:''}</section>`;
 }
 function crumbs(...parts){
-  return `<div class="crumbs"><div><a href="#/">الصفحة الرئيسية</a>${parts.map(p=>' &nbsp;›&nbsp; '+p).join('')}</div></div>`;
+  return `<div class="crumbs"><div><a href="#/">→ العودة إلى الأعمال</a>${parts.map(p=>' &nbsp;›&nbsp; '+p).join('')}</div></div>`;
 }
 
 function route(){
