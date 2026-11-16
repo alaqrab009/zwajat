@@ -83,7 +83,7 @@ label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
 <button class="dirty" id="dirty" onclick="publish()">● توجد تعديلات غير منشورة — اضغط للنشر</button>
 
 <script>
-let D = null, tab = 'settings', itemFilter = '', dirty = false;
+let D = null, tab = 'settings', dirty = false;
 const TABS = [['settings','الإعدادات والألوان'],['items','الأعمال'],['publish','النشر والأمان']];
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -191,62 +191,21 @@ async function pickLogo(el){
   setPath('settings.logoImage', await shrink(el.files[0], 400)); draw();
 }
 
-/* ---------- القائمة ---------- */
-function linkOptions(cur){
-  const opts = [['home','الصفحة الرئيسية'], ...D.categories.map(c=>['cat:'+c.id,'قسم: '+c.name]), ...D.pages.map(p=>['page:'+p.id,'صفحة: '+p.title]), ['wa','واتساب (طلب تصوير)'], ['url','رابط خارجي']];
-  const isUrl = /^https?:/.test(cur);
-  return opts.map(([v,n]) => `<option value="${esc(v)}" ${(v===cur || (v==='url' && isUrl))?'selected':''}>${esc(n)}</option>`).join('');
-}
-function pMenu(){
-  return `<h2>القائمة العلوية</h2><p class="hint">رتّب الروابط بالأسهم، وغيّر اسم كل رابط ووجهته.</p>
-  ${D.menu.map((m,i)=>`<div class="box"><div class="line">
-    <div><label>الاسم</label>${inp(`menu.${i}.label`, m.label)}</div>
-    <div><label>يفتح</label><select onchange="menuLink(${i},this.value)">${linkOptions(m.link)}</select></div>
-    ${/^https?:/.test(m.link) || m.link==='url' ? `<div><label>الرابط</label>${inp(`menu.${i}.link`, m.link==='url'?'https://':m.link)}</div>` : ''}
-    <button class="btn sec sm" onclick="move(D.menu,${i},-1)">▲</button>
-    <button class="btn sec sm" onclick="move(D.menu,${i},1)">▼</button>
-    <button class="btn red sm" onclick="D.menu.splice(${i},1);markDirty();draw()">حذف</button>
-  </div></div>`).join('')}
-  <button class="btn" style="margin-top:16px" onclick="D.menu.push({label:'رابط جديد',link:'home'});markDirty();draw()">+ إضافة رابط</button>`;
-}
-function menuLink(i, v){ D.menu[i].link = v === 'url' ? 'https://' : v; markDirty(); draw(); }
-
-/* ---------- الأقسام ---------- */
-function pCats(){
-  return `<h2>الأقسام</h2><p class="hint">كل قسم يظهر كصفحة مستقلة في الموقع (مثل: زواجات). لا تنسَ إضافته للقائمة من تبويب «القائمة».</p>
-  ${D.categories.map((c,i)=>{
-    const n = D.items.filter(x=>x.category===c.id).length;
-    return `<div class="box"><div class="line">
-      <div><label>اسم القسم <span class="badge">${n} عمل</span></label>${inp(`categories.${i}.name`, c.name)}</div>
-      <button class="btn sec sm" onclick="move(D.categories,${i},-1)">▲</button>
-      <button class="btn sec sm" onclick="move(D.categories,${i},1)">▼</button>
-      <button class="btn red sm" onclick="delCat(${i})">حذف</button>
-    </div></div>`;}).join('')}
-  <button class="btn" style="margin-top:16px" onclick="addCat()">+ إضافة قسم</button>`;
-}
-function addCat(){ D.categories.push({id:'c'+uid(), name:'قسم جديد'}); markDirty(); draw(); }
-function delCat(i){
-  const c = D.categories[i], n = D.items.filter(x=>x.category===c.id).length;
-  if(!confirm(n ? `هذا القسم فيه ${n} عمل وسيتم حذفها معه. متأكد؟` : 'حذف القسم؟')) return;
-  D.items = D.items.filter(x=>x.category!==c.id);
-  D.menu = D.menu.filter(m=>m.link!=='cat:'+c.id);
-  D.categories.splice(i,1); markDirty(); draw();
-}
-
 /* ---------- الأعمال ---------- */
 function pItems(){
-  const list = D.items.map((it,i)=>({it,i})).filter(o=>!itemFilter || o.it.category===itemFilter)
-    .sort((a,b)=>(b.it.date||'').localeCompare(a.it.date||''));
-  return `<h2>الأعمال</h2><p class="hint">أضف الأعمال وعدّلها. أول صورة هي الغلاف، ويمكنك جعل أي صورة غلافاً بالضغط على «غلاف».</p>
-  <div class="line">
-    <div><label>عرض قسم</label><select onchange="itemFilter=this.value;draw()"><option value="">كل الأقسام</option>${D.categories.map(c=>`<option value="${esc(c.id)}" ${c.id===itemFilter?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
-    <button class="btn" onclick="addItem()">+ إضافة عمل جديد</button>
-  </div>
-  ${list.map(({it,i})=>`<div class="box">
+  const list = D.items.map((it,i)=>({it,i})).sort((a,b)=>(b.it.date||'').localeCompare(a.it.date||''));
+  return `<h2>الأعمال</h2><p class="hint">العمل الجديد يكون «مسودة» ولا يظهر في الموقع حتى تضغط بجواره «✅ موافقة ونشر». أول صورة هي الغلاف، ويمكنك جعل أي صورة غلافاً بالضغط على «غلاف».</p>
+  <button class="btn" onclick="addItem()">+ إضافة عمل جديد</button>
+  ${list.map(({it,i})=>{
+    const draft = it.published === false;
+    return `<div class="box" style="${draft?'border:2px dashed var(--gold)':''}">
+    <div class="line" style="margin-top:0;align-items:center;justify-content:space-between">
+      <span class="badge" style="${draft?'':'background:#3aa76d;color:#fff'}">${draft?'مسودة — غير ظاهر في الموقع':'✔ منشور في الموقع'}</span>
+      ${draft ? `<button class="btn green" onclick="approveItem(${i})">✅ موافقة ونشر</button>` : `<button class="btn sec sm" onclick="hideItem(${i})">إخفاء من الموقع</button>`}
+    </div>
     <div class="row2">
       <div><label>العنوان</label>${inp(`items.${i}.title`, it.title)}</div>
       <div><label>التاريخ</label>${inp(`items.${i}.date`, it.date, 'date')}</div>
-      <div><label>القسم</label><select onchange="setPath('items.${i}.category',this.value)">${D.categories.map(c=>`<option value="${esc(c.id)}" ${c.id===it.category?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
     </div>
     <label>الوصف (اختياري)</label><textarea data-p="items.${i}.description">${esc(it.description)}</textarea>
     <label>الصور (${it.images.length})</label>
@@ -254,14 +213,19 @@ function pItems(){
     <label>إضافة صور (يمكن اختيار عدة صور)</label>
     <input type="file" accept="image/*" multiple onchange="addImgs(${i},this)">
     <div style="margin-top:12px;text-align:left"><button class="btn red sm" onclick="delItem(${i})">🗑 حذف هذا العمل</button></div>
-  </div>`).join('') || '<div class="hint" style="margin-top:20px">لا توجد أعمال.</div>'}`;
+  </div>`;}).join('') || '<div class="hint" style="margin-top:20px">لا توجد أعمال.</div>'}`;
 }
 function addItem(){
-  const cat = itemFilter || (D.categories[0] && D.categories[0].id);
-  if(!cat){ alert('أضف قسماً أولاً'); return; }
-  D.items.unshift({id:'i'+uid(), title:'عمل جديد', date:new Date().toISOString().slice(0,10), category:cat, images:[], description:''});
+  D.items.unshift({id:'i'+uid(), title:'عمل جديد', date:new Date().toISOString().slice(0,10), images:[], description:'', published:false});
   markDirty(); draw();
 }
+function approveItem(i){
+  D.items[i].published = true; draw();
+  rev++; dirty = true; clearTimeout(autoTimer);
+  $('dirty').style.display = 'block'; $('dirty').textContent = '● جارٍ النشر...';
+  publish(true);
+}
+function hideItem(i){ D.items[i].published = false; markDirty(); draw(); }
 function delItem(i){ if(confirm('حذف هذا العمل؟')){ D.items.splice(i,1); markDirty(); draw(); } }
 function delImg(i,k){ D.items[i].images.splice(k,1); markDirty(); draw(); }
 function coverImg(i,k){ const a = D.items[i].images; a.unshift(a.splice(k,1)[0]); markDirty(); draw(); }
@@ -285,22 +249,6 @@ function shrink(file, max){
     };
     r.readAsDataURL(file);
   });
-}
-
-/* ---------- الصفحات ---------- */
-function pPages(){
-  return `<h2>الصفحات النصية</h2><p class="hint">مثل «نبذة عنا» و«اتصل بنا». تظهر في القائمة بعد ربطها من تبويب «القائمة».</p>
-  ${D.pages.map((p,i)=>`<div class="box">
-    <label>عنوان الصفحة</label>${inp(`pages.${i}.title`, p.title)}
-    <label>المحتوى</label><textarea style="min-height:160px" data-p="pages.${i}.content">${esc(p.content)}</textarea>
-    <div style="margin-top:10px;text-align:left"><button class="btn red sm" onclick="delPage(${i})">حذف الصفحة</button></div>
-  </div>`).join('')}
-  <button class="btn" style="margin-top:16px" onclick="D.pages.push({id:'p'+uid(),title:'صفحة جديدة',content:''});markDirty();draw()">+ إضافة صفحة</button>`;
-}
-function delPage(i){
-  if(!confirm('حذف الصفحة؟')) return;
-  D.menu = D.menu.filter(m=>m.link!=='page:'+D.pages[i].id);
-  D.pages.splice(i,1); markDirty(); draw();
 }
 
 /* ---------- النشر والأمان ---------- */

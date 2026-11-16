@@ -75,7 +75,7 @@ function waLink(msg){ return `https://wa.me/${String(D.settings.waNumber||'').re
 function linkHref(l){
   if(l === 'home') return '#/';
   if(l === 'wa') return waLink(D.settings.waMessage);
-  if(l.startsWith('cat:')) return '#/cat/' + l.slice(4);
+  if(l.startsWith('cat:')) return '#/';
   if(l.startsWith('page:')) return '#/page/' + l.slice(5);
   return l;
 }
@@ -118,7 +118,6 @@ function route(){
   window.scrollTo(0,0);
   const parts = h.slice(2).split('/');
 
-  if(parts[0]==='cat') return showCat(parts[1]);
   if(parts[0]==='item') return showItem(parts[1]);
   if(parts[0]==='page') return showPage(parts[1]);
   showHome();
@@ -126,28 +125,12 @@ function route(){
 
 function showHome(){
   markActive('#/');
-  let html = titleBlock(D.settings.siteName, D.settings.tagline) + '<main>';
-  let any = false;
-  D.categories.forEach(c=>{
-    const list = sorted(D.items.filter(i=>i.category===c.id)).slice(0,4);
-    if(!list.length) return;
-    any = true;
-    html += `<div class="home-section"><div class="section-head"><h2>${esc(c.name)}</h2><a href="#/cat/${esc(c.id)}">عرض الكل ‹</a></div><div class="grid">${list.map(card).join('')}</div></div>`;
-  });
-  if(!any) html += '<div class="empty">لا توجد أعمال بعد.</div>';
-  view.innerHTML = html + '</main>';
-}
-
-function showCat(id){
-  const c = D.categories.find(x=>x.id===id);
-  if(!c){ view.innerHTML = titleBlock('القسم غير موجود') + '<main><div class="empty">لم نجد هذا القسم.</div></main>'; return; }
-  markActive('#/cat/'+id);
   const per = Math.max(1, +D.settings.perPage || 8);
-  const list = sorted(D.items.filter(i=>i.category===id));
+  const list = sorted(D.items.filter(i=>i.published !== false));
   const pages = Math.max(1, Math.ceil(list.length/per));
   if(catPage > pages) catPage = 1;
-  let html = titleBlock(c.name) + crumbs(esc(c.name)) + '<main>';
-  html += list.length ? `<div class="grid">${list.slice((catPage-1)*per, catPage*per).map(card).join('')}</div>` : '<div class="empty">لا توجد أعمال في هذا القسم بعد.</div>';
+  let html = titleBlock(D.settings.siteName, D.settings.tagline) + '<main>';
+  html += list.length ? `<div class="grid">${list.slice((catPage-1)*per, catPage*per).map(card).join('')}</div>` : '<div class="empty">لا توجد أعمال بعد.</div>';
   if(pages > 1){
     html += '<div class="pager">';
     for(let i=1;i<=pages;i++) html += `<button class="${i===catPage?'on':''}" onclick="goPage(${i})">${i}</button>`;
@@ -155,17 +138,16 @@ function showCat(id){
   }
   view.innerHTML = html + '</main>';
 }
-function goPage(n){ catPage = n; route(); }
+function goPage(n){ catPage = n; route(); window.scrollTo(0,0); }
 
 let gi = 0, gimgs = [];
 function showItem(id){
-  const it = D.items.find(x=>x.id===id);
+  const it = D.items.find(x=>x.id===id && x.published !== false);
   if(!it){ view.innerHTML = titleBlock('العمل غير موجود') + '<main><div class="empty">لم نجد هذا العمل.</div></main>'; return; }
-  const c = D.categories.find(x=>x.id===it.category);
-  markActive(c ? '#/cat/'+c.id : '');
+  markActive('#/');
   gimgs = it.images || []; gi = 0;
   const msg = `${D.settings.waMessage || ''} ${it.title}`.trim();
-  view.innerHTML = crumbs(...[c?`<a href="#/cat/${esc(c.id)}">${esc(c.name)}</a>`:'', esc(it.title)].filter(Boolean)) +
+  view.innerHTML = crumbs(esc(it.title)) +
     `<main><div class="detail">
       <div class="gallery" id="gal" style="${gimgs.length?'':'background:'+grad(it.id)}"></div>
       <h1>${esc(it.title)}</h1><time>${fmt(it.date)}</time>
@@ -199,7 +181,7 @@ function showPage(id){
 }
 
 document.getElementById('menuBtn').onclick = ()=>document.getElementById('nav').classList.toggle('open');
-window.addEventListener('hashchange', ()=>{ catPage = 1; if(D) route(); });
+window.addEventListener('hashchange', ()=>{ if(!/^#\/?$/.test(location.hash)) {} catPage = 1; if(D) route(); });
 init();
 </script>
 </body>

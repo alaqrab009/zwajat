@@ -22,31 +22,25 @@
     "pinHash": "217f7badc5615d5e40b71b9177cf9c15a1a61fa0c22de6bff18e18bece6dba0d"
   },
   "menu": [],
-  "categories": [
-    {
-      "id": "cmwjv20y07s5t",
-      "name": "زوجات"
-    }
-  ],
   "pages": [],
   "items": [
     {
       "id": "imwjvg5wucec3",
       "title": "عمل جديد",
       "date": "2026-11-16",
-      "category": "cmwjv20y07s5t",
       "images": [
         "images/mwjvgfgx2d1l.jpg"
       ],
-      "description": ""
+      "description": "",
+      "published": true
     },
     {
       "id": "imwjut39oguv9",
       "title": "زواج عمر",
       "date": "2026-11-16",
-      "category": "weddings",
       "images": [],
-      "description": "مرحبا بكم"
+      "description": "مرحبا بكم",
+      "published": true
     }
   ]
 }
