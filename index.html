@@ -34,6 +34,10 @@
 
 <script>
 let D = null;
+// البيانات والصور تُقرأ من GitHub مباشرة، فيظهر أي حفظ بدون انتظار إعادة بناء الموقع
+const RAW = 'https://raw.githubusercontent.com/alaqrab009/zwajat/main/';
+const imgUrl = p => (p && p.startsWith('images/')) ? RAW + p : p;
+const imgFallback = p => `onerror="this.onerror=null;this.src='${esc(p)}'"`;
 const view = document.getElementById('view');
 let catPage = 1;
 
@@ -45,9 +49,16 @@ const sorted = list => [...list].sort((a,b)=> (b.date||'').localeCompare(a.date|
 
 async function init(){
   try{
-    const r = await fetch('data.json?t=' + Date.now());
-    if(!r.ok) throw 0;
-    D = await r.json();
+    let r;
+    try{
+      r = await fetch(RAW + 'data.json?t=' + Math.floor(Date.now()/30000), { cache:'no-store' });
+      if(!r.ok) throw 0;
+      D = await r.json();
+    }catch(e){
+      r = await fetch('data.json?t=' + Date.now(), { cache:'no-store' });
+      if(!r.ok) throw 0;
+      D = await r.json();
+    }
   }catch(e){
     view.innerHTML = '<div class="empty">تعذّر تحميل البيانات.<br>افتح الموقع من رابط الاستضافة (وليس بنقر الملف مباشرة).</div>';
     return;
@@ -62,7 +73,7 @@ function applySettings(){
   root.setProperty('--bg', s.bg); root.setProperty('--bg-dark', s.bgDark);
   root.setProperty('--card', s.card); root.setProperty('--accent', s.accent);
   document.title = s.siteName;
-  document.getElementById('logo').innerHTML = (s.logoImage ? `<img src="${esc(s.logoImage)}" alt="">` : '') + `<span>${esc(s.siteName)}</span>`;
+  document.getElementById('logo').innerHTML = (s.logoImage ? `<img src="${esc(imgUrl(s.logoImage))}" alt="" ${imgFallback(s.logoImage)}>` : '') + `<span>${esc(s.siteName)}</span>`;
   document.getElementById('footText').textContent = s.footerText || '';
   document.getElementById('devText').textContent = s.devText || '';
   const soc = [['x','X'],['instagram','IG'],['snap','SC'],['tiktok','TT'],['youtube','YT']];
@@ -98,7 +109,7 @@ function card(it){
   const n = (it.images||[]).length;
   return `<article class="card" onclick="location.hash='#/item/${esc(it.id)}'">
     <div class="thumb" style="background:${grad(it.id)}">
-      ${cover ? `<img src="${esc(cover)}" alt="${esc(it.title)}" loading="lazy">` : `<span class="ph">📷</span>`}
+      ${cover ? `<img src="${esc(imgUrl(cover))}" alt="${esc(it.title)}" loading="lazy" ${imgFallback(cover)}>` : `<span class="ph">📷</span>`}
       ${n>1 ? `<span class="count">${n} صور</span>` : ''}
     </div>
     <div class="info"><h3>${esc(it.title)}</h3><time>${fmt(it.date)}</time></div>
@@ -145,7 +156,7 @@ function showItem(id){
   const it = D.items.find(x=>x.id===id && x.published !== false);
   if(!it){ view.innerHTML = titleBlock('العمل غير موجود') + '<main><div class="empty">لم نجد هذا العمل.</div></main>'; return; }
   markActive('#/');
-  gimgs = it.images || []; gi = 0;
+  gimgs = (it.images || []).map(imgUrl); gi = 0;
   view.innerHTML = crumbs(esc(it.title)) +
     `<main><div class="detail">
       <div class="gallery" id="gal" style="${gimgs.length?'':'background:'+grad(it.id)}"></div>
