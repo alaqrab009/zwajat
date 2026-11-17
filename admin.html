@@ -71,7 +71,7 @@ label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
 
 <div id="app">
   <div class="top">
-    <h1>⚙️ لوحة إدارة الموقع <small style="font-size:12px;color:var(--muted)">(نسخة 5)</small></h1>
+    <h1>⚙️ لوحة إدارة الموقع <small style="font-size:12px;color:var(--muted)">(نسخة 6)</small></h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <a class="btn sec sm" href="index.html" target="_blank" style="text-decoration:none;display:inline-block">عرض الموقع</a>
       <button class="btn green sm" onclick="publish()">🚀 نشر التعديلات</button>
@@ -153,6 +153,12 @@ document.addEventListener('input', e => {
 
 function draw(){
   $('tabs').innerHTML = TABS.map(([k,n]) => `<button class="tab ${k===tab?'on':''}" onclick="tab='${k}';draw()">${n}</button>`).join('');
+  if(!G().token && tab !== 'publish'){
+    $('panel').innerHTML = `<h2>🔒 الصق مفتاح GitHub أولاً</h2>
+      <p class="hint">بدون المفتاح لن يُحفظ أي تعديل، وقد تظهر لك بيانات قديمة. ألصق المفتاح مرة واحدة في تبويب «النشر والأمان» ثم اضغط «حفظ المفتاح».</p>
+      <button class="btn" onclick="tab='publish';draw()">اذهب إلى النشر والأمان</button>`;
+    return;
+  }
   $('panel').innerHTML = ({settings:pSettings, items:pItems, publish:pPublish})[tab]();
 }
 
@@ -298,7 +304,10 @@ async function saveToken(){
     const j = await r.json().catch(()=>({}));
     if(!r.ok) log('❌ المفتاح غير مقبول: ' + (j.message || r.status) + '\nتأكد أنك نسخته كاملاً وأنه مخصص للمستودع ' + g.repo);
     else if(j.permissions && !j.permissions.push) log('⚠️ المفتاح صحيح لكن بدون صلاحية الكتابة. اجعل Contents = Read and write.');
-    else { log('✅ المفتاح صحيح ومعتمد، ويمكنك النشر الآن.'); draw(); log('✅ المفتاح صحيح ومعتمد.'); }
+    else {
+      await load();   // أحدث بيانات من GitHub مباشرة
+      draw(); log('✅ المفتاح صحيح ومعتمد، وتم تحميل أحدث بياناتك (' + D.items.length + ' عمل). يمكنك التعديل الآن.');
+    }
   }catch(e){ log('❌ تعذّر الاتصال: ' + e.message); }
 }
 async function changePin(){
@@ -374,7 +383,7 @@ async function publish(silent){
     log('✅ تم النشر بنجاح. يظهر التحديث في الموقع خلال دقيقة تقريباً.');
     publishing = false;
     if(rev !== myRev){ autoTimer = setTimeout(() => publish(true), 1500); }
-    else { dirty = false; const b = $('dirty'); b.textContent = '✅ تم الحفظ'; setTimeout(()=>{ if(!dirty) b.style.display='none'; }, 2500); }
+    else { dirty = false; const b = $('dirty'); b.textContent = '✅ تم الحفظ — يظهر في الموقع خلال دقيقة تقريباً'; setTimeout(()=>{ if(!dirty) b.style.display='none'; }, 6000); }
     return true;
   }catch(e){
     log('❌ فشل النشر: ' + e.message);
